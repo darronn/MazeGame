@@ -12,7 +12,7 @@ private:
     vector<vector<char>> maze;
     int playerX, playerY;        // Player's coordinates
     int exitX, exitY;            // Exit coordinates
-    // Enemy coordinates
+    vector<pair<int, int>> enemies; // Enemy coordinates
     int width, height;
     const int WALL = '#';
     const int PASSAGE = ' ';
@@ -79,10 +79,25 @@ public:
         maze[exitY][exitX] = 'E';  // Mark exit
 
         // Add enemies
-        
+        placeEnemies();
     }
 
-    
+    void placeEnemies() {
+        enemies.clear();
+        int enemyCount = 2 + currentLevel; // Increase enemy count with each level
+
+        while (enemyCount > 0) {
+            int ex = rand() % width;
+            int ey = rand() % height;
+
+            // Ensure the enemy is placed on a passage, and not where the player or exit is
+            if (maze[ey][ex] == PASSAGE && (ex != playerX || ey != playerY) && (ex != exitX || ey != exitY)) {
+                enemies.push_back({ ex, ey });
+                maze[ey][ex] = 'X';  // Mark enemy on the maze
+                enemyCount--;
+            }
+        }
+    }
 
     void displayMaze() {
         for (int y = 0; y < height; y++) {
@@ -109,9 +124,40 @@ public:
         return playerX == exitX && playerY == exitY;
     }
 
-    
+    bool isCaughtByEnemy() {
+        for (auto& enemy : enemies) {
+            if (playerX == enemy.first && playerY == enemy.second) {
+                return true;
+            }
+        }
+        return false;
+    }
 
-   
+    void moveEnemies() {
+        for (auto& enemy : enemies) {
+            int dx = 0, dy = 0;
+            int direction = rand() % 4; // Random movement: 0 = up, 1 = down, 2 = left, 3 = right
+
+            switch (direction) {
+            case 0: dy = -1; break; // Move up
+            case 1: dy = 1; break;  // Move down
+            case 2: dx = -1; break; // Move left
+            case 3: dx = 1; break;  // Move right
+            }
+
+            int newEnemyX = enemy.first + dx;
+            int newEnemyY = enemy.second + dy;
+
+            if (maze[newEnemyY][newEnemyX] != WALL && maze[newEnemyY][newEnemyX] != 'E') {
+                maze[enemy.second][enemy.first] = PASSAGE;  // Clear old enemy position
+                enemy.first = newEnemyX;
+                enemy.second = newEnemyY;
+                maze[enemy.second][enemy.first] = 'X';  // Place enemy in new position
+            }
+        }
+    }
+
+ 
 
     void playGame() {
         while (true) {
@@ -119,16 +165,21 @@ public:
 
             // Redraw player and enemies
             maze[playerY][playerX] = 'P'; // Ensure the player is drawn
-          
+            for (auto& enemy : enemies) {
+                maze[enemy.second][enemy.first] = 'X'; // Ensure enemies are drawn
+            }
 
             displayMaze();
 
             if (isExitReached()) {
                 
-                continue;
+                continue;//problem with the maze being completed
             }
 
-            
+            if (isCaughtByEnemy()) {
+                cout << "Game Over! You were caught by an enemy!" << endl;
+                break;
+            }
 
             // Get user input for movement
             char input = _getch();
@@ -141,7 +192,7 @@ public:
             }
 
             // Move enemies after player moves
-            
+            moveEnemies();
         }
     }
 };
@@ -151,3 +202,4 @@ int main() {
     game.playGame();
     return 0;
 }
+
